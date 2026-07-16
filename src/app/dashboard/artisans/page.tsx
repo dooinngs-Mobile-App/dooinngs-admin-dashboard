@@ -1,28 +1,35 @@
 "use client";
 
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { DataTable } from "@/components/ui/data-table";
 import { CategoryTabs } from "@/components/admin/CategoryTabs";
 import { artisanColumns, type Artisan } from "./columns";
-
-// TODO: replace with real API data
-const mockArtisans: Artisan[] = Array.from({ length: 10 }, (_, i) => ({
-  id: String(i + 1),
-  name: "Kwame Mensah",
-  phone: "+233 24 456 7890",
-  email: "kwame.mensah@gmail.com",
-  service: "Plumbing",
-  bookings: 134,
-}));
+import { listArtisans } from "@/api/client";
 
 export default function ArtisansPage() {
   const [, setCategory] = useState("Barbers");
+
+  const { data } = useQuery({
+    queryKey: listArtisans.key,
+    queryFn: listArtisans.fn,
+  });
+
+  const artisans: Artisan[] =
+    data?.results.map((artisan) => ({
+      id: artisan.id,
+      name: `${artisan.first_name} ${artisan.last_name}`.trim(),
+      phone: artisan.phone_number,
+      email: artisan.email,
+      service: artisan.professions,
+      bookings: artisan.business_count,
+    })) ?? [];
 
   return (
     <div className="p-8">
       <DataTable
         columns={artisanColumns}
-        data={mockArtisans}
+        data={artisans}
         title="Artisans"
         searchPlaceholder="Search artisans..."
         toolbar={<CategoryTabs onChange={setCategory} />}

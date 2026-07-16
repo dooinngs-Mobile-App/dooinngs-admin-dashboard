@@ -24,13 +24,19 @@ function getFormattedDate() {
   return `${day}, ${date} ${month}, ${year}`;
 }
 
+function getDisplayName(user: ReturnType<typeof useAuth>["user"]) {
+  if (!user) return "";
+  if ("name" in user) return user.name;
+  return `${user.first_name} ${user.last_name}`.trim();
+}
+
 export function DashboardGreeting() {
   const { user } = useAuth();
 
   return (
     <div>
       <h1 className="text-2xl font-bold text-[#1A1A1A]">
-        {getGreeting()}, {user?.name} 👋
+        {getGreeting()}, {getDisplayName(user)} 👋
       </h1>
       <p className="text-sm text-[#838383] mt-1">{getFormattedDate()}</p>
     </div>
