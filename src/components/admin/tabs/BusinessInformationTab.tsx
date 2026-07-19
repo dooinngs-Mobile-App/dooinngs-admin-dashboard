@@ -6,6 +6,8 @@ type Props = {
   artisan: {
     service: string;
   };
+  isEditing?: boolean;
+  onCancel?: () => void;
 };
 
 /* ── Reusable floating-label outlined input ── */
@@ -14,12 +16,14 @@ function OutlinedInput({
   label,
   required,
   defaultValue,
+  disabled,
   type = "text",
 }: {
   id: string;
   label: string;
   required?: boolean;
   defaultValue?: string;
+  disabled?: boolean;
   type?: string;
 }) {
   return (
@@ -36,7 +40,8 @@ function OutlinedInput({
           id={id}
           type={type}
           defaultValue={defaultValue}
-          className="w-full text-[#1A1A1A] text-lg font-normal outline-none bg-transparent placeholder:text-[#C4C4C4]"
+          disabled={disabled}
+          className="w-full text-[#1A1A1A] text-lg font-normal outline-none bg-transparent placeholder:text-[#C4C4C4] disabled:text-[#9E9E9E] disabled:cursor-not-allowed"
         />
       </div>
     </div>
@@ -51,6 +56,7 @@ function OutlinedSelect({
   defaultValue,
   options,
   prefix,
+  disabled,
 }: {
   id: string;
   label: string;
@@ -58,6 +64,7 @@ function OutlinedSelect({
   defaultValue?: string;
   options: string[];
   prefix?: string;
+  disabled?: boolean;
 }) {
   return (
     <div className="relative">
@@ -74,7 +81,8 @@ function OutlinedSelect({
           <select
             id={id}
             defaultValue={defaultValue}
-            className="flex-1 text-[#1A1A1A] text-lg font-normal outline-none bg-transparent appearance-none cursor-pointer"
+            disabled={disabled}
+            className="flex-1 text-[#1A1A1A] text-lg font-normal outline-none bg-transparent appearance-none cursor-pointer disabled:text-[#9E9E9E] disabled:cursor-not-allowed"
           >
             {options.map((opt) => (
               <option key={opt} value={opt}>
@@ -106,7 +114,11 @@ function OutlinedSelect({
   );
 }
 
-export function BusinessInformationTab({ artisan }: Props) {
+export function BusinessInformationTab({
+  artisan,
+  isEditing = false,
+  onCancel,
+}: Props) {
   const logoInputRef = useRef<HTMLInputElement>(null);
 
   return (
@@ -136,8 +148,10 @@ export function BusinessInformationTab({ artisan }: Props) {
 
           {/* Pink refresh icon */}
           <button
+            type="button"
+            disabled={!isEditing}
             onClick={() => logoInputRef.current?.click()}
-            className="absolute bottom-0 right-0 w-8 h-8 rounded-lg bg-[#F82C5D] flex items-center justify-center shadow-sm hover:bg-[#d9254f] transition-colors"
+            className="absolute bottom-0 right-0 w-8 h-8 rounded-lg bg-[#F82C5D] flex items-center justify-center shadow-sm hover:bg-[#d9254f] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             aria-label="Change business logo"
           >
             <svg
@@ -166,8 +180,10 @@ export function BusinessInformationTab({ artisan }: Props) {
         <p className="text-sm text-[#9E9E9E]">Business Logo</p>
 
         <button
+          type="button"
+          disabled={!isEditing}
           id="delete-business-logo-btn"
-          className="w-fit px-5 py-2 rounded-full border border-[#F82C5D] text-[#1A1A1A] text-sm font-medium hover:bg-[#fff0f3] transition-colors"
+          className="w-fit px-5 py-2 rounded-full border border-[#F82C5D] text-[#1A1A1A] text-sm font-medium hover:bg-[#fff0f3] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           Delete image
         </button>
@@ -182,6 +198,7 @@ export function BusinessInformationTab({ artisan }: Props) {
             label="Choose your profession"
             required
             defaultValue={artisan.service}
+            disabled={!isEditing}
             options={[
               "Barber",
               "Plumber",
@@ -198,6 +215,7 @@ export function BusinessInformationTab({ artisan }: Props) {
             id="business-name"
             label="Business name"
             required
+            disabled={!isEditing}
             defaultValue="The Sharp Edge"
           />
 
@@ -205,6 +223,7 @@ export function BusinessInformationTab({ artisan }: Props) {
             id="business-address"
             label="Address of business"
             required
+            disabled={!isEditing}
             defaultValue="123 Lagos Avenue"
           />
 
@@ -212,6 +231,7 @@ export function BusinessInformationTab({ artisan }: Props) {
             id="business-city"
             label="City of business"
             required
+            disabled={!isEditing}
             defaultValue="Accra"
           />
         </div>
@@ -222,6 +242,7 @@ export function BusinessInformationTab({ artisan }: Props) {
             id="business-state"
             label="State/region of business"
             required
+            disabled={!isEditing}
             defaultValue="Greater Accra Region"
           />
 
@@ -231,6 +252,7 @@ export function BusinessInformationTab({ artisan }: Props) {
             required
             defaultValue="Ghana"
             prefix="🇬🇭"
+            disabled={!isEditing}
             options={["Ghana", "Nigeria", "Kenya", "South Africa", "Uganda"]}
           />
 
@@ -238,6 +260,7 @@ export function BusinessInformationTab({ artisan }: Props) {
             id="business-gps"
             label="GPS Address of business"
             required
+            disabled={!isEditing}
             defaultValue="GD-008 -1101"
           />
 
@@ -250,14 +273,35 @@ export function BusinessInformationTab({ artisan }: Props) {
               loading="lazy"
             />
             <button
+              type="button"
+              disabled={!isEditing}
               id="edit-map-btn"
-              className="absolute bottom-4 left-4 px-5 py-2.5 rounded-full bg-[#F82C5D] text-white text-sm font-semibold shadow-md hover:bg-[#d9254f] active:scale-95 transition-all duration-150"
+              className="absolute bottom-4 left-4 px-5 py-2.5 rounded-full bg-[#F82C5D] text-white text-sm font-semibold shadow-md hover:bg-[#d9254f] active:scale-95 transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Edit map
             </button>
           </div>
         </div>
       </div>
+
+      {isEditing && (
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="px-5 py-2.5 rounded-xl bg-[#F82C5D] text-white text-sm font-semibold hover:bg-[#d9254f] active:scale-95 transition-all duration-150"
+          >
+            Save
+          </button>
+          <button
+            type="button"
+            onClick={onCancel}
+            className="px-5 py-2.5 rounded-xl border border-gray-300 text-[#3D3D3D] text-sm font-semibold hover:bg-gray-50 transition-colors"
+          >
+            Cancel
+          </button>
+        </div>
+      )}
     </div>
   );
 }

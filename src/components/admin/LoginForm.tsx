@@ -29,8 +29,6 @@ export function LoginForm() {
   const {
     mutate: adminLoginCode,
     isPending: isAdminLoggingIn,
-    isError: isLoginError,
-    error: loginErrorValue,
   } = useMutation({
     mutationKey: adminLogin.key,
     mutationFn: adminLogin.fn,
@@ -48,8 +46,7 @@ export function LoginForm() {
     adminLoginCode(data);
   }
 
-  const displayError =
-    serverError ?? getErrorMessage(loginErrorValue, "Login failed");
+  const displayError = serverError;
 
   return (
     <div className="w-full">

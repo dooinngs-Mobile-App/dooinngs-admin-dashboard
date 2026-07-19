@@ -2,31 +2,66 @@
 
 import { useParams, useRouter } from "next/navigation";
 import { useState, useRef, useEffect } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { AvatarInitials } from "@/components/ui/avatar-initials";
+import { PageLoader } from "@/components/ui/spinner";
 import { ArtisanDetailTabs } from "@/components/admin/ArtisanDetailTabs";
+import {
+  getArtisan,
+  setArtisanStatus,
+  deleteArtisan,
+  updateArtisan,
+} from "@/api/client";
 
-// TODO: replace with real API fetch by id
-const mockArtisans = Array.from({ length: 10 }, (_, i) => ({
-  id: String(i + 1),
-  name: "Kwame Mensah",
-  phone: "+233 24 456 7890",
-  email: "kwame.mensah@gmail.com",
-  service: "Plumbing",
-  bookings: 134,
-  rating: 4.8,
-  location: "Accra, Ghana",
-  joined: "January 2024",
-  verified: true,
-}));
+const OWNER_DETAILS_FORM_ID = "owner-details-form";
 
 export default function ArtisanDetailPage() {
   const router = useRouter();
   const { id } = useParams<{ id: string }>();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const [isDeactivated, setIsDeactivated] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const queryClient = useQueryClient();
+  const [isEditingDetails, setIsEditingDetails] = useState(false);
+  const [formResetKey, setFormResetKey] = useState(0);
 
-  const artisan = mockArtisans.find((a) => a.id === id) ?? mockArtisans[0];
+  const { data, isLoading, isError } = useQuery({
+    queryKey: getArtisan.key(id),
+    queryFn: () => getArtisan.fn(id),
+    enabled: Boolean(id),
+  });
+
+  const isDeactivated = data ? !data.is_active || data.is_disabled : false;
+
+  const { mutate: toggleStatus, isPending: isTogglingStatus } = useMutation({
+    mutationKey: setArtisanStatus.key,
+    mutationFn: setArtisanStatus.fn,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: getArtisan.key(id) });
+    },
+  });
+
+  const { mutate: removeArtisan, isPending: isDeletingArtisan } = useMutation({
+    mutationKey: deleteArtisan.key,
+    mutationFn: deleteArtisan.fn,
+    onSuccess: () => {
+      router.push("/dashboard/artisans");
+    },
+  });
+
+  const { mutate: saveOwnerDetails, isPending: isSavingOwnerDetails } =
+    useMutation({
+      mutationKey: updateArtisan.key,
+      mutationFn: updateArtisan.fn,
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: getArtisan.key(id) });
+        setIsEditingDetails(false);
+      },
+    });
+
+  function cancelEditingDetails() {
+    setIsEditingDetails(false);
+    setFormResetKey((key) => key + 1);
+  }
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -47,6 +82,31 @@ export default function ArtisanDetailPage() {
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, [isDropdownOpen]);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-[#F7F7F8] p-8 flex items-center justify-center">
+        <PageLoader label="Loading artisan details..." />
+      </div>
+    );
+  }
+
+  if (isError || !data) {
+    return (
+      <div className="min-h-screen bg-[#F7F7F8] p-8 flex items-center justify-center text-[#F82C5D]">
+        Failed to load artisan details.
+      </div>
+    );
+  }
+
+  const artisan = {
+    id: data.id,
+    name: `${data.first_name} ${data.last_name}`.trim(),
+    phone: data.phone_number ?? "-",
+    email: data.email,
+    service: data.professions.join(", ") || "-",
+    bookings: data.business_count,
+  };
 
   return (
     <div className="min-h-screen bg-[#F7F7F8] p-8">
@@ -110,23 +170,27 @@ export default function ArtisanDetailPage() {
                   className="absolute left-0 mt-1 w-48 bg-white border border-gray-200 rounded-xl shadow-lg py-1.5 z-50 animate-in fade-in slide-in-from-top-1 duration-150"
                 >
                   <button
+                    disabled={isTogglingStatus}
                     onClick={() => {
-                      setIsDeactivated(!isDeactivated);
+                      toggleStatus({
+                        id,
+                        action: isDeactivated ? "activate" : "deactivate",
+                      });
                       setIsDropdownOpen(false);
                     }}
-                    className="w-full px-4 py-2 text-left text-sm text-[#3D3D3D] hover:bg-gray-50 hover:text-[#1A1A1A] transition-colors cursor-pointer"
+                    className="w-full px-4 py-2 text-left text-sm text-[#3D3D3D] hover:bg-gray-50 hover:text-[#1A1A1A] transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {isDeactivated ? "Activate account" : "Deactivate account"}
                   </button>
                   <button
+                    disabled={isDeletingArtisan}
                     onClick={() => {
                       if (confirm("Are you sure you want to delete this account?")) {
-                        alert("Account deleted");
-                        router.push("/dashboard/artisans");
+                        removeArtisan(id);
                       }
                       setIsDropdownOpen(false);
                     }}
-                    className="w-full px-4 py-2 text-left text-sm text-[#F82C5D] hover:bg-red-50 hover:text-[#E41C4C] font-medium transition-colors cursor-pointer"
+                    className="w-full px-4 py-2 text-left text-sm text-[#F82C5D] hover:bg-red-50 hover:text-[#E41C4C] font-medium transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     Delete account
                   </button>
@@ -188,28 +252,39 @@ export default function ArtisanDetailPage() {
         <div className="flex-1" />
 
         {/* Update details button */}
-        <button
-          id="update-artisan-details-btn"
-          className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#F82C5D] text-white text-sm font-semibold hover:bg-[#d9254f] active:scale-95 transition-all duration-150 shrink-0"
-        >
-          <svg
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
+        {!isEditingDetails && (
+          <button
+            onClick={() => setIsEditingDetails(true)}
+            id="update-artisan-details-btn"
+            className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#F82C5D] text-white text-sm font-semibold hover:bg-[#d9254f] active:scale-95 transition-all duration-150 shrink-0"
           >
-            <path
-              d="M3 17.25V21H6.75L17.81 9.94L14.06 6.19L3 17.25ZM20.71 7.04C21.1 6.65 21.1 6.02 20.71 5.63L18.37 3.29C17.98 2.9 17.35 2.9 16.96 3.29L15.13 5.12L18.88 8.87L20.71 7.04Z"
-              fill="white"
-            />
-          </svg>
-          Update Details
-        </button>
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M3 17.25V21H6.75L17.81 9.94L14.06 6.19L3 17.25ZM20.71 7.04C21.1 6.65 21.1 6.02 20.71 5.63L18.37 3.29C17.98 2.9 17.35 2.9 16.96 3.29L15.13 5.12L18.88 8.87L20.71 7.04Z"
+                fill="white"
+              />
+            </svg>
+            Update Details
+          </button>
+        )}
       </div>
 
       {/* ── Detail tabs ── */}
-      <ArtisanDetailTabs artisan={artisan} />
+      <ArtisanDetailTabs
+        key={formResetKey}
+        artisan={artisan}
+        isEditingDetails={isEditingDetails}
+        ownerDetailsFormId={OWNER_DETAILS_FORM_ID}
+        onSubmitOwnerDetails={(payload) => saveOwnerDetails({ id, payload })}
+        onCancelEditingDetails={cancelEditingDetails}
+        isSavingOwnerDetails={isSavingOwnerDetails}
+      />
     </div>
   );
 }

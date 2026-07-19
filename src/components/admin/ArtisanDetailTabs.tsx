@@ -14,10 +14,6 @@ type Artisan = {
   email: string;
   service: string;
   bookings: number;
-  rating: number;
-  location: string;
-  joined: string;
-  verified: boolean;
 };
 
 type Tab = {
@@ -36,7 +32,28 @@ const TABS: Tab[] = [
   { id: "all-bookings", label: "All Bookings" },
 ];
 
-export function ArtisanDetailTabs({ artisan }: { artisan: Artisan }) {
+type OwnerDetailsPayload = {
+  first_name: string;
+  last_name: string;
+  email: string;
+  phone_number: string;
+};
+
+export function ArtisanDetailTabs({
+  artisan,
+  isEditingDetails = false,
+  ownerDetailsFormId,
+  onSubmitOwnerDetails,
+  onCancelEditingDetails,
+  isSavingOwnerDetails = false,
+}: {
+  artisan: Artisan;
+  isEditingDetails?: boolean;
+  ownerDetailsFormId?: string;
+  onSubmitOwnerDetails?: (payload: OwnerDetailsPayload) => void;
+  onCancelEditingDetails?: () => void;
+  isSavingOwnerDetails?: boolean;
+}) {
   const [activeTab, setActiveTab] = useState("owners-details");
 
   return (
@@ -68,8 +85,23 @@ export function ArtisanDetailTabs({ artisan }: { artisan: Artisan }) {
 
       {/* Tab content */}
       <div className="p-6">
-        {activeTab === "owners-details" && <OwnersDetailsTab artisan={artisan} />}
-        {activeTab === "business-information" && <BusinessInformationTab artisan={artisan} />}
+        {activeTab === "owners-details" && (
+          <OwnersDetailsTab
+            artisan={artisan}
+            formId={ownerDetailsFormId}
+            isEditing={isEditingDetails}
+            isSaving={isSavingOwnerDetails}
+            onSubmit={onSubmitOwnerDetails}
+            onCancel={onCancelEditingDetails}
+          />
+        )}
+        {activeTab === "business-information" && (
+          <BusinessInformationTab
+            artisan={artisan}
+            isEditing={isEditingDetails}
+            onCancel={onCancelEditingDetails}
+          />
+        )}
         {activeTab === "business-hours" && <BusinessHoursTab />}
         {activeTab === "price-list" && <PriceListTab />}
         {activeTab === "service-type" && <ServiceTypeTab />}

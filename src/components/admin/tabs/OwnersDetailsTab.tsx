@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef } from "react";
+import { Spinner } from "@/components/ui/spinner";
 
 type Props = {
   artisan: {
@@ -8,20 +9,34 @@ type Props = {
     phone: string;
     email: string;
   };
+  formId?: string;
+  isEditing?: boolean;
+  isSaving?: boolean;
+  onSubmit?: (payload: {
+    first_name: string;
+    last_name: string;
+    email: string;
+    phone_number: string;
+  }) => void;
+  onCancel?: () => void;
 };
 
 /* ── Floating-label outlined input ── */
 function OutlinedInput({
   id,
+  name,
   label,
   required,
   defaultValue,
+  disabled,
   type = "text",
 }: {
   id: string;
+  name: string;
   label: string;
   required?: boolean;
   defaultValue?: string;
+  disabled?: boolean;
   type?: string;
 }) {
   return (
@@ -40,23 +55,48 @@ function OutlinedInput({
         {/* Input */}
         <input
           id={id}
+          name={name}
           type={type}
           defaultValue={defaultValue}
-          className="w-full text-[#1A1A1A] text-lg font-normal outline-none bg-transparent placeholder:text-[#C4C4C4]"
+          disabled={disabled}
+          className="w-full text-[#1A1A1A] text-lg font-normal outline-none bg-transparent placeholder:text-[#C4C4C4] disabled:text-[#9E9E9E] disabled:cursor-not-allowed"
         />
       </div>
     </div>
   );
 }
 
-export function OwnersDetailsTab({ artisan }: Props) {
+export function OwnersDetailsTab({
+  artisan,
+  formId,
+  isEditing = false,
+  isSaving = false,
+  onSubmit,
+  onCancel,
+}: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [firstName, ...rest] = artisan.name.split(" ");
   const lastName = rest.join(" ");
 
+  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!onSubmit) return;
+    const formData = new FormData(event.currentTarget);
+    onSubmit({
+      first_name: String(formData.get("first_name") ?? ""),
+      last_name: String(formData.get("last_name") ?? ""),
+      email: String(formData.get("email") ?? ""),
+      phone_number: String(formData.get("phone_number") ?? ""),
+    });
+  }
+
   return (
-    <div className="flex flex-col gap-7 max-w-2xl">
+    <form
+      id={formId}
+      onSubmit={handleSubmit}
+      className="flex flex-col gap-7 max-w-2xl"
+    >
       {/* ── Profile image section ── */}
       <div className="flex flex-col gap-2">
         {/* Avatar with refresh icon */}
@@ -85,8 +125,10 @@ export function OwnersDetailsTab({ artisan }: Props) {
 
           {/* Pink refresh / change icon */}
           <button
+            type="button"
+            disabled={!isEditing}
             onClick={() => fileInputRef.current?.click()}
-            className="absolute bottom-0 right-0 w-8 h-8 rounded-lg bg-[#F82C5D] flex items-center justify-center shadow-sm hover:bg-[#d9254f] transition-colors"
+            className="absolute bottom-0 right-0 w-8 h-8 rounded-lg bg-[#F82C5D] flex items-center justify-center shadow-sm hover:bg-[#d9254f] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             aria-label="Change profile image"
           >
             <svg
@@ -118,8 +160,10 @@ export function OwnersDetailsTab({ artisan }: Props) {
 
         {/* Delete image button */}
         <button
+          type="button"
+          disabled={!isEditing}
           id="delete-profile-image-btn"
-          className="w-fit px-5 py-2 rounded-full border border-[#F82C5D] text-[#1A1A1A] text-sm font-medium hover:bg-[#fff0f3] transition-colors"
+          className="w-fit px-5 py-2 rounded-full border border-[#F82C5D] text-[#1A1A1A] text-sm font-medium hover:bg-[#fff0f3] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           Delete image
         </button>
@@ -128,31 +172,60 @@ export function OwnersDetailsTab({ artisan }: Props) {
       {/* ── Form fields ── */}
       <OutlinedInput
         id="owner-first-name"
+        name="first_name"
         label="First name"
         required
+        disabled={!isEditing}
         defaultValue={firstName}
       />
 
       <OutlinedInput
         id="owner-last-name"
+        name="last_name"
         label="Last name"
         required
+        disabled={!isEditing}
         defaultValue={lastName}
       />
 
       <OutlinedInput
         id="owner-email"
+        name="email"
         label="Email address"
         type="email"
+        disabled={!isEditing}
         defaultValue={artisan.email}
       />
 
       <OutlinedInput
         id="owner-phone"
+        name="phone_number"
         label="Phone number"
         type="tel"
+        disabled={!isEditing}
         defaultValue={artisan.phone}
       />
-    </div>
+
+      {isEditing && (
+        <div className="flex items-center gap-3">
+          <button
+            type="submit"
+            disabled={isSaving}
+            className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#F82C5D] text-white text-sm font-semibold hover:bg-[#d9254f] active:scale-95 transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isSaving && <Spinner size={14} className="text-white" />}
+            {isSaving ? "Saving..." : "Save"}
+          </button>
+          <button
+            type="button"
+            disabled={isSaving}
+            onClick={onCancel}
+            className="px-5 py-2.5 rounded-xl border border-gray-300 text-[#3D3D3D] text-sm font-semibold hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Cancel
+          </button>
+        </div>
+      )}
+    </form>
   );
 }

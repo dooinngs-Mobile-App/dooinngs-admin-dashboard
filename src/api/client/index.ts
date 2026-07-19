@@ -41,15 +41,6 @@ export function getErrorMessage(error: unknown, fallback: string): string {
   return error instanceof Error ? error.message : fallback;
 }
 
-export type SendOtpPayload = {
-  phone_number: string;
-};
-
-export type VerifyOtpPayload = {
-  phone_number: string;
-  otp_code: string;
-};
-
 export type AuthUser = {
   id: string;
   first_name: string;
@@ -60,7 +51,7 @@ export type AuthUser = {
   profile_photo: string | null;
 };
 
-export type VerifyOtpResponse = {
+export type AdminLoginResponse = {
   success: boolean;
   message: string;
   token_details: {
@@ -70,32 +61,6 @@ export type VerifyOtpResponse = {
     access_token_expiry: string;
   };
   user: AuthUser;
-};
-
-export const sendOtp = {
-  key: ["auth", "send-otp"] as const,
-  fn: async (payload: SendOtpPayload) => {
-    try {
-      const url = "/authentication/send-otp/";
-      const { data } = await apiClient.post(url, payload);
-      return data;
-    } catch (error) {
-      throwError(error);
-    }
-  },
-};
-
-export const verifyOtp = {
-  key: ["auth", "verify-otp"] as const,
-  fn: async (payload: VerifyOtpPayload) => {
-    try {
-      const url = "/authentication/verify-otp/";
-      const { data } = await apiClient.post<VerifyOtpResponse>(url, payload);
-      return data;
-    } catch (error) {
-      throwError(error);
-    }
-  },
 };
 
 export type AdminLoginPayload = {
@@ -108,7 +73,7 @@ export const adminLogin = {
   fn: async (payload: AdminLoginPayload) => {
     try {
       const url = "/authentication/admin-login/";
-      const { data } = await apiClient.post<VerifyOtpResponse>(url, payload);
+      const { data } = await apiClient.post<AdminLoginResponse>(url, payload);
       if (!data.token_details?.access) {
         throw new Error("adminLogin failed");
       }
@@ -132,13 +97,13 @@ export type ArtisanResult = {
   email: string;
   first_name: string;
   last_name: string;
-  phone_number: string;
+  phone_number: string | null;
   profile_photo: string | null;
   is_active: boolean;
   is_disabled: boolean;
   created_at: string;
   business_count: number;
-  professions: string;
+  professions: string[];
 };
 
 export const listArtisans = {
@@ -148,6 +113,97 @@ export const listArtisans = {
       const url = "/dashboard/artisans/";
       const { data } =
         await apiClient.get<PaginatedResponse<ArtisanResult>>(url);
+      return data;
+    } catch (error) {
+      throwError(error);
+    }
+  },
+};
+
+export type ArtisanBusiness = {
+  id: string;
+  name: string;
+  address: string;
+  city: string;
+  state: string;
+  country: string;
+};
+
+export type ArtisanDetail = ArtisanResult & {
+  businesses: ArtisanBusiness[];
+};
+
+export const getArtisan = {
+  key: (id: string) => ["artisans", "detail", id] as const,
+  fn: async (id: string) => {
+    try {
+      const url = `/dashboard/artisans/${id}/`;
+      const { data } = await apiClient.get<{
+        success: boolean;
+        message: string;
+        data: ArtisanDetail;
+      }>(url);
+      return data.data;
+    } catch (error) {
+      throwError(error);
+    }
+  },
+};
+
+export type ArtisanStatusAction = "activate" | "deactivate";
+
+export const setArtisanStatus = {
+  key: ["artisans", "set-status"] as const,
+  fn: async ({
+    id,
+    action,
+  }: {
+    id: string;
+    action: ArtisanStatusAction;
+  }) => {
+    try {
+      const url = `/dashboard/artisans/${id}/${action}/`;
+      const { data } = await apiClient.post(url);
+      return data;
+    } catch (error) {
+      throwError(error);
+    }
+  },
+};
+
+export const deleteArtisan = {
+  key: ["artisans", "delete"] as const,
+  fn: async (id: string) => {
+    try {
+      const url = `/dashboard/artisans/${id}/delete/`;
+      const { data } = await apiClient.delete(url);
+      return data;
+    } catch (error) {
+      throwError(error);
+    }
+  },
+};
+
+export type UpdateArtisanPayload = Partial<{
+  first_name: string;
+  last_name: string;
+  email: string;
+  phone_number: string;
+  profile_photo: string;
+}>;
+
+export const updateArtisan = {
+  key: ["artisans", "update"] as const,
+  fn: async ({
+    id,
+    payload,
+  }: {
+    id: string;
+    payload: UpdateArtisanPayload;
+  }) => {
+    try {
+      const url = `/dashboard/artisans/${id}/`;
+      const { data } = await apiClient.patch(url, payload);
       return data;
     } catch (error) {
       throwError(error);

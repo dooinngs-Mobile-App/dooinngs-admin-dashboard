@@ -1,12 +1,12 @@
 "use client";
 
-import { createContext, useContext, useState, ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import Cookies from "js-cookie";
 import {
   ACCESS_TOKEN_COOKIE,
   REFRESH_TOKEN_COOKIE,
   type AuthUser,
-  type VerifyOtpResponse,
+  type AdminLoginResponse,
 } from "@/api/client";
 
 // TODO: replace with real API credentials when backend is ready
@@ -24,18 +24,21 @@ type AuthContextType = {
   user: User | null;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<string | null>;
-  setSessionUser: (response: VerifyOtpResponse) => void;
+  setSessionUser: (response: AdminLoginResponse) => void;
   logout: () => void;
 };
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(() => {
+  const [user, setUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
     const stored = Cookies.get(USER_COOKIE);
-    return stored ? JSON.parse(stored) : null;
-  });
-  const [isLoading] = useState(false);
+    setUser(stored ? JSON.parse(stored) : null);
+    setIsLoading(false);
+  }, []);
 
   async function login(
     email: string,
@@ -57,7 +60,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return "Invalid email or password.";
   }
 
-  function setSessionUser(response: VerifyOtpResponse) {
+  function setSessionUser(response: AdminLoginResponse) {
     const { user: authUser, token_details } = response;
     setUser(authUser);
     Cookies.set(USER_COOKIE, JSON.stringify(authUser));
