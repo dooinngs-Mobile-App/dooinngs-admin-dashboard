@@ -2,8 +2,11 @@
 
 import { useState } from "react";
 import { Switch } from "@/components/ui/switch";
+import { Spinner } from "@/components/ui/spinner";
+import type { BusinessHour } from "@/api/client";
 
 type DayHours = {
+  id?: string;
   enabled: boolean;
   open: string;
   close: string;
@@ -21,15 +24,35 @@ const DAYS = [
   "Sunday",
 ];
 
-const DEFAULT_HOURS: BusinessHours = {
-  Monday:    { enabled: true,  open: "8:00am", close: "5:00pm" },
-  Tuesday:   { enabled: true,  open: "8:00am", close: "5:00pm" },
-  Wednesday: { enabled: false, open: "8:00am", close: "5:00pm" },
-  Thursday:  { enabled: false, open: "8:00am", close: "5:00pm" },
-  Friday:    { enabled: false, open: "8:00am", close: "5:00pm" },
-  Saturday:  { enabled: false, open: "8:00am", close: "5:00pm" },
-  Sunday:    { enabled: false, open: "8:00am", close: "5:00pm" },
-};
+const DEFAULT_DAY: DayHours = { enabled: false, open: "08:00", close: "17:00" };
+
+function toApiHours(hours: BusinessHours): BusinessHour[] {
+  return DAYS.map((day) => ({
+    ...(hours[day].id ? { id: hours[day].id } : {}),
+    day,
+    is_available_for_booking: hours[day].enabled,
+    open_time: hours[day].open,
+    close_time: hours[day].close,
+  }));
+}
+
+function fromApiHours(businessHours?: BusinessHour[]): BusinessHours {
+  const byDay = new Map((businessHours ?? []).map((h) => [h.day, h]));
+  return DAYS.reduce((acc, day) => {
+    const entry = byDay.get(day);
+    return {
+      ...acc,
+      [day]: entry
+        ? {
+            id: entry.id,
+            enabled: entry.is_available_for_booking,
+            open: entry.open_time.slice(0, 5),
+            close: entry.close_time.slice(0, 5),
+          }
+        : { ...DEFAULT_DAY },
+    };
+  }, {} as BusinessHours);
+}
 
 /* ── Time pill selector ── */
 function TimePill({
@@ -41,48 +64,33 @@ function TimePill({
   value: string;
   onChange: (val: string) => void;
 }) {
-  // Convert "8:00am" → "08:00" for <input type="time">
-  const toInputTime = (t: string) => {
-    const match = t.match(/^(\d+):(\d+)(am|pm)$/i);
-    if (!match) return "08:00";
-    let [, h, m, period] = match;
-    let hours = parseInt(h);
-    if (period.toLowerCase() === "pm" && hours !== 12) hours += 12;
-    if (period.toLowerCase() === "am" && hours === 12) hours = 0;
-    return `${String(hours).padStart(2, "0")}:${m}`;
-  };
-
-  // Convert "08:00" → "8:00am"
-  const toDisplay = (t: string) => {
-    const [hStr, mStr] = t.split(":");
-    let h = parseInt(hStr);
-    const period = h >= 12 ? "pm" : "am";
-    if (h > 12) h -= 12;
-    if (h === 0) h = 12;
-    return `${h}:${mStr}${period}`;
-  };
-
   return (
-    <label
-      htmlFor={id}
-      className="relative bg-[#EBEBEB] rounded-lg px-4 py-2 text-[#1A1A1A] text-sm font-medium cursor-pointer hover:bg-[#E0E0E0] transition-colors"
-    >
-      {toDisplay(toInputTime(value))}
-      <input
-        id={id}
-        type="time"
-        value={toInputTime(value)}
-        onChange={(e) => onChange(toDisplay(e.target.value))}
-        className="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
-      />
-    </label>
+    <input
+      id={id}
+      type="time"
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      className="bg-[#EBEBEB] rounded-lg px-4 py-2 text-[#1A1A1A] text-sm font-medium cursor-pointer hover:bg-[#E0E0E0] transition-colors outline-none scheme-light"
+    />
   );
 }
 
-export function BusinessHoursTab() {
-  const [hours, setHours] = useState<BusinessHours>(DEFAULT_HOURS);
+export function BusinessHoursTab({
+  businessHours,
+  isSaving = false,
+  onSave,
+}: {
+  businessHours?: BusinessHour[];
+  isSaving?: boolean;
+  onSave?: (hours: BusinessHour[]) => void;
+}) {
+  const [hours, setHours] = useState<BusinessHours>(() =>
+    fromApiHours(businessHours),
+  );
+  const [isDirty, setIsDirty] = useState(false);
 
   const toggleDay = (day: string) => {
+    setIsDirty(true);
     setHours((prev) => ({
       ...prev,
       [day]: { ...prev[day], enabled: !prev[day].enabled },
@@ -90,14 +98,20 @@ export function BusinessHoursTab() {
   };
 
   const updateTime = (day: string, field: "open" | "close", value: string) => {
+    setIsDirty(true);
     setHours((prev) => ({
       ...prev,
       [day]: { ...prev[day], [field]: value },
     }));
   };
 
+  function handleSave() {
+    onSave?.(toApiHours(hours));
+    setIsDirty(false);
+  }
+
   return (
-    <div className="flex flex-col gap-3 max-w-2xl">
+    <div className="flex flex-col gap-5 max-w-2xl">
       {DAYS.map((day) => {
         const { enabled, open, close } = hours[day];
         return (
@@ -135,6 +149,20 @@ export function BusinessHoursTab() {
           </div>
         );
       })}
+
+      {onSave && (
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            disabled={!isDirty || isSaving}
+            onClick={handleSave}
+            className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#F82C5D] text-white text-sm font-semibold hover:bg-[#d9254f] active:scale-95 transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isSaving && <Spinner size={14} className="text-white" />}
+            {isSaving ? "Saving..." : "Save"}
+          </button>
+        </div>
+      )}
     </div>
   );
 }

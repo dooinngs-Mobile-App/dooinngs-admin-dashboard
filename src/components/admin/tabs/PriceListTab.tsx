@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { Spinner } from "@/components/ui/spinner";
+import type { BusinessServiceCategory } from "@/api/client";
 
 /* ── Types ── */
 type ServiceItem = {
@@ -13,6 +15,7 @@ type ServiceItem = {
 type Category = {
   id: string;
   name: string;
+  description?: string;
   services: ServiceItem[];
 };
 
@@ -27,27 +30,72 @@ const DURATION_OPTIONS = [
   "3hrs",
 ];
 
+const DURATION_TO_HHMMSS: Record<string, string> = {
+  "15mins": "00:15:00",
+  "30mins": "00:30:00",
+  "45mins": "00:45:00",
+  "1hr": "01:00:00",
+  "1hr 30mins": "01:30:00",
+  "2hrs": "02:00:00",
+  "2hrs 30mins": "02:30:00",
+  "3hrs": "03:00:00",
+};
+
+const HHMMSS_TO_DURATION: Record<string, string> = Object.fromEntries(
+  Object.entries(DURATION_TO_HHMMSS).map(([label, hhmmss]) => [hhmmss, label]),
+);
+
+const TEMP_ID_PREFIX = "tmp-";
+
 const makeService = (): ServiceItem => ({
-  id: Math.random().toString(36).slice(2),
+  id: `${TEMP_ID_PREFIX}${Math.random().toString(36).slice(2)}`,
   name: "",
   price: "",
   duration: "",
 });
 
-const DEFAULT_CATEGORIES: Category[] = [
-  {
-    id: "cat-1",
-    name: "Barbering services",
-    services: [
-      { id: "svc-1", name: "Haircut", price: "GHS 50", duration: "45mins" },
-      makeService(),
-      makeService(),
-      makeService(),
-      makeService(),
-      makeService(),
-    ],
-  },
-];
+const EMPTY_CATEGORY = (): Category => ({
+  id: `${TEMP_ID_PREFIX}${Math.random().toString(36).slice(2)}`,
+  name: "",
+  services: [makeService(), makeService()],
+});
+
+export type PriceListPayload = ReturnType<typeof toApiCategories>;
+
+function toApiCategories(categories: Category[]) {
+  return categories
+    .filter((cat) => cat.name.trim())
+    .map((cat) => ({
+      ...(cat.id.startsWith(TEMP_ID_PREFIX) ? {} : { id: cat.id }),
+      name: cat.name,
+      ...(cat.description !== undefined ? { description: cat.description } : {}),
+      services: cat.services
+        .filter((svc) => svc.name.trim())
+        .map((svc) => ({
+          ...(svc.id.startsWith(TEMP_ID_PREFIX) ? {} : { id: svc.id }),
+          name: svc.name,
+          price: svc.price,
+          duration: DURATION_TO_HHMMSS[svc.duration] ?? svc.duration,
+        })),
+    }));
+}
+
+function fromApiCategories(
+  categories?: BusinessServiceCategory[],
+): Category[] {
+  if (!categories || categories.length === 0) return [EMPTY_CATEGORY()];
+  return categories.map((cat) => ({
+    id: cat.id ?? `${TEMP_ID_PREFIX}${Math.random().toString(36).slice(2)}`,
+    name: cat.name,
+    description: cat.description,
+    services: cat.services.map((svc) => ({
+      id: svc.id,
+      name: svc.name,
+      price: svc.price,
+      duration: HHMMSS_TO_DURATION[svc.duration] ?? "",
+    })),
+  }));
+}
 
 /* ── Single service row ── */
 function ServiceRow({
@@ -196,19 +244,21 @@ function CategoryBlock({
 }
 
 /* ── Main tab ── */
-export function PriceListTab() {
-  const [categories, setCategories] =
-    useState<Category[]>(DEFAULT_CATEGORIES);
+export function PriceListTab({
+  categories: apiCategories,
+  isSaving = false,
+  onSave,
+}: {
+  categories?: BusinessServiceCategory[];
+  isSaving?: boolean;
+  onSave?: (categories: PriceListPayload) => void;
+}) {
+  const [categories, setCategories] = useState<Category[]>(() =>
+    fromApiCategories(apiCategories),
+  );
 
   const addCategory = () => {
-    setCategories((prev) => [
-      ...prev,
-      {
-        id: Math.random().toString(36).slice(2),
-        name: "",
-        services: [makeService(), makeService()],
-      },
-    ]);
+    setCategories((prev) => [...prev, EMPTY_CATEGORY()]);
   };
 
   const updateCategory = (index: number, updated: Category) => {
@@ -228,14 +278,26 @@ export function PriceListTab() {
       ))}
 
       {/* Add a new category */}
-      <div className="flex justify-end">
+      <div className="flex justify-end items-center gap-3">
         <button
           id="add-new-category-btn"
           onClick={addCategory}
-          className="px-6 py-3 rounded-full bg-[#F82C5D] text-white text-sm font-semibold hover:bg-[#d9254f] active:scale-95 transition-all duration-150 shadow-sm"
+          className="px-6 py-3 rounded-full border border-gray-300 text-[#3D3D3D] text-sm font-semibold hover:bg-gray-50 transition-colors"
         >
           Add a new category
         </button>
+
+        {onSave && (
+          <button
+            type="button"
+            disabled={isSaving}
+            onClick={() => onSave(toApiCategories(categories))}
+            className="flex items-center gap-2 px-6 py-3 rounded-full bg-[#F82C5D] text-white text-sm font-semibold hover:bg-[#d9254f] active:scale-95 transition-all duration-150 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isSaving && <Spinner size={14} className="text-white" />}
+            {isSaving ? "Saving..." : "Save"}
+          </button>
+        )}
       </div>
     </div>
   );

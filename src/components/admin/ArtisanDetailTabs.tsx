@@ -2,10 +2,18 @@
 
 import { useState } from "react";
 import { OwnersDetailsTab } from "@/components/admin/tabs/OwnersDetailsTab";
-import { BusinessInformationTab } from "@/components/admin/tabs/BusinessInformationTab";
+import {
+  BusinessInformationTab,
+  type BusinessInfoPayload,
+} from "@/components/admin/tabs/BusinessInformationTab";
 import { BusinessHoursTab } from "@/components/admin/tabs/BusinessHoursTab";
-import { PriceListTab } from "@/components/admin/tabs/PriceListTab";
+import {
+  PriceListTab,
+  type PriceListPayload,
+} from "@/components/admin/tabs/PriceListTab";
 import { ServiceTypeTab } from "@/components/admin/tabs/ServiceTypeTab";
+import { BusinessImagesTab } from "@/components/admin/tabs/BusinessImagesTab";
+import type { ArtisanBusiness, BusinessHour } from "@/api/client";
 
 type Artisan = {
   id: string;
@@ -41,18 +49,38 @@ type OwnerDetailsPayload = {
 
 export function ArtisanDetailTabs({
   artisan,
+  business,
   isEditingDetails = false,
   ownerDetailsFormId,
   onSubmitOwnerDetails,
   onCancelEditingDetails,
   isSavingOwnerDetails = false,
+  businessInfoFormId,
+  onSubmitBusinessInfo,
+  isSavingBusinessInfo = false,
+  onSaveBusinessHours,
+  isSavingBusinessHours = false,
+  onSavePriceList,
+  isSavingPriceList = false,
+  onSaveServiceTypes,
+  isSavingServiceTypes = false,
 }: {
   artisan: Artisan;
+  business?: ArtisanBusiness;
   isEditingDetails?: boolean;
   ownerDetailsFormId?: string;
   onSubmitOwnerDetails?: (payload: OwnerDetailsPayload) => void;
   onCancelEditingDetails?: () => void;
   isSavingOwnerDetails?: boolean;
+  businessInfoFormId?: string;
+  onSubmitBusinessInfo?: (payload: BusinessInfoPayload) => void;
+  isSavingBusinessInfo?: boolean;
+  onSaveBusinessHours?: (hours: BusinessHour[]) => void;
+  isSavingBusinessHours?: boolean;
+  onSavePriceList?: (categories: PriceListPayload) => void;
+  isSavingPriceList?: boolean;
+  onSaveServiceTypes?: (serviceTypes: string[]) => void;
+  isSavingServiceTypes?: boolean;
 }) {
   const [activeTab, setActiveTab] = useState("owners-details");
 
@@ -98,14 +126,46 @@ export function ArtisanDetailTabs({
         {activeTab === "business-information" && (
           <BusinessInformationTab
             artisan={artisan}
+            business={business}
+            formId={businessInfoFormId}
             isEditing={isEditingDetails}
+            isSaving={isSavingBusinessInfo}
+            onSubmit={onSubmitBusinessInfo}
             onCancel={onCancelEditingDetails}
           />
         )}
-        {activeTab === "business-hours" && <BusinessHoursTab />}
-        {activeTab === "price-list" && <PriceListTab />}
-        {activeTab === "service-type" && <ServiceTypeTab />}
-        {activeTab !== "owners-details" && activeTab !== "business-information" && activeTab !== "business-hours" && activeTab !== "price-list" && activeTab !== "service-type" &&
+        {activeTab === "business-hours" && (
+          <BusinessHoursTab
+            businessHours={business?.business_hours}
+            isSaving={isSavingBusinessHours}
+            onSave={onSaveBusinessHours}
+          />
+        )}
+        {activeTab === "price-list" && (
+          <PriceListTab
+            categories={business?.service_categories}
+            isSaving={isSavingPriceList}
+            onSave={onSavePriceList}
+          />
+        )}
+        {activeTab === "service-type" && (
+          <ServiceTypeTab
+            serviceTypes={business?.service_types}
+            isSaving={isSavingServiceTypes}
+            onSave={onSaveServiceTypes}
+          />
+        )}
+        {activeTab === "business-images" && (
+          <BusinessImagesTab photos={business?.photos} />
+        )}
+        {![
+          "owners-details",
+          "business-information",
+          "business-hours",
+          "price-list",
+          "service-type",
+          "business-images",
+        ].includes(activeTab) &&
           TABS.filter((t) => t.id === activeTab).map((tab) => (
             <ComingSoonTab key={tab.id} label={tab.label} />
           ))}

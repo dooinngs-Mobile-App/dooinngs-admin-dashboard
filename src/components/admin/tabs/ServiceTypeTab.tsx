@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Spinner } from "@/components/ui/spinner";
 
 type ServiceType = {
   id: string;
@@ -9,23 +10,39 @@ type ServiceType = {
 };
 
 const SERVICE_TYPES: ServiceType[] = [
-  { id: "home-service", label: "Home Service", emoji: "🏠" },
-  { id: "walk-in",      label: "Walk in",      emoji: "🚶" },
+  { id: "home", label: "Home Service", emoji: "🏠" },
+  { id: "walkin", label: "Walk in", emoji: "🚶" },
 ];
 
-export function ServiceTypeTab() {
-  const [selected, setSelected] = useState<string>("home-service");
+export function ServiceTypeTab({
+  serviceTypes,
+  isSaving = false,
+  onSave,
+}: {
+  serviceTypes?: string[];
+  isSaving?: boolean;
+  onSave?: (serviceTypes: string[]) => void;
+}) {
+  const [selected, setSelected] = useState<string[]>(serviceTypes ?? []);
+  const [isDirty, setIsDirty] = useState(false);
+
+  function toggle(id: string) {
+    setIsDirty(true);
+    setSelected((prev) =>
+      prev.includes(id) ? prev.filter((t) => t !== id) : [...prev, id],
+    );
+  }
 
   return (
     <div className="flex flex-col gap-6 max-w-2xl">
       <div className="grid grid-cols-2 gap-5">
         {SERVICE_TYPES.map((type) => {
-          const isSelected = selected === type.id;
+          const isSelected = selected.includes(type.id);
           return (
             <button
               key={type.id}
               id={`service-type-${type.id}`}
-              onClick={() => setSelected(type.id)}
+              onClick={() => toggle(type.id)}
               className={`relative flex flex-col items-center justify-center gap-4 rounded-2xl bg-white py-10 px-6 transition-all duration-200 cursor-pointer select-none
                 ${
                   isSelected
@@ -65,6 +82,23 @@ export function ServiceTypeTab() {
           );
         })}
       </div>
+
+      {onSave && (
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            disabled={!isDirty || isSaving}
+            onClick={() => {
+              onSave(selected);
+              setIsDirty(false);
+            }}
+            className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#F82C5D] text-white text-sm font-semibold hover:bg-[#d9254f] active:scale-95 transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isSaving && <Spinner size={14} className="text-white" />}
+            {isSaving ? "Saving..." : "Save"}
+          </button>
+        </div>
+      )}
     </div>
   );
 }

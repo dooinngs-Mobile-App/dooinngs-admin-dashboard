@@ -120,13 +120,89 @@ export const listArtisans = {
   },
 };
 
-export type ArtisanBusiness = {
+export type BusinessProfession = {
+  id: number;
+  name: string;
+  description?: string;
+  emoji?: string;
+  display_order?: number;
+};
+
+export type BusinessLocation = {
+  id?: string;
+  gps_address?: string;
+  street_address?: string;
+  city?: string;
+  state?: string;
+  country?: string;
+  latitude?: number;
+  longitude?: number;
+};
+
+export type SocialMediaAccounts = Partial<{
+  website: string;
+  facebook: string;
+  instagram: string;
+  twitter: string;
+  tiktok: string;
+  linkedin: string;
+  youtube: string;
+  whatsapp: string;
+}>;
+
+export type BusinessHour = {
+  id?: string;
+  day: string;
+  open_time: string;
+  close_time: string;
+  is_available_for_booking: boolean;
+};
+
+export type BusinessService = {
   id: string;
   name: string;
-  address: string;
-  city: string;
-  state: string;
-  country: string;
+  price: string;
+  duration: string;
+  is_active?: boolean;
+};
+
+export type BusinessServiceCategory = {
+  id?: string;
+  name: string;
+  description?: string;
+  is_active?: boolean;
+  services: BusinessService[];
+};
+
+export type BusinessPhoto = {
+  id: string;
+  image_url: string;
+  thumbnail_url: string;
+  public_id: string;
+  width: number;
+  height: number;
+  format: string;
+};
+
+export type BusinessDetails = {
+  id: string;
+  business_name: string;
+  location: BusinessLocation;
+  is_active: boolean;
+  service_types: string[];
+  social_media_accounts: SocialMediaAccounts;
+  business_logo: string | null;
+  service_categories: BusinessServiceCategory[];
+  share_link?: string;
+};
+
+export type ArtisanBusiness = {
+  business_details: BusinessDetails;
+  photos: BusinessPhoto[];
+  service_types: string[];
+  business_hours: BusinessHour[];
+  service_categories: BusinessServiceCategory[];
+  profession: BusinessProfession | null;
 };
 
 export type ArtisanDetail = ArtisanResult & {
@@ -184,12 +260,38 @@ export const deleteArtisan = {
   },
 };
 
+export type UpdateArtisanBusinessPayload = Partial<{
+  business_name: string;
+  profession_id: number;
+  location: Partial<BusinessLocation>;
+  service_types: string[];
+  business_hours: Array<{
+    id?: string;
+    day: string;
+    open_time: string;
+    close_time: string;
+    is_available_for_booking: boolean;
+  }>;
+  service_categories: Array<{
+    id?: string;
+    name: string;
+    description?: string;
+    services: Array<{
+      id?: string;
+      name: string;
+      price: string;
+      duration: string;
+    }>;
+  }>;
+}> & { id: string };
+
 export type UpdateArtisanPayload = Partial<{
   first_name: string;
   last_name: string;
   email: string;
   phone_number: string;
   profile_photo: string;
+  businesses: UpdateArtisanBusinessPayload[];
 }>;
 
 export const updateArtisan = {

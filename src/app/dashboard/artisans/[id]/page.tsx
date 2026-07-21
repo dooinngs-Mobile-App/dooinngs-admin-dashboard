@@ -11,7 +11,10 @@ import {
   setArtisanStatus,
   deleteArtisan,
   updateArtisan,
+  type BusinessHour,
 } from "@/api/client";
+import type { BusinessInfoPayload } from "@/components/admin/tabs/BusinessInformationTab";
+import type { PriceListPayload } from "@/components/admin/tabs/PriceListTab";
 
 const OWNER_DETAILS_FORM_ID = "owner-details-form";
 
@@ -58,9 +61,103 @@ export default function ArtisanDetailPage() {
       },
     });
 
+  const { mutate: saveBusinessInfo, isPending: isSavingBusinessInfo } =
+    useMutation({
+      mutationKey: updateArtisan.key,
+      mutationFn: updateArtisan.fn,
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: getArtisan.key(id) });
+        setIsEditingDetails(false);
+      },
+    });
+
+  const { mutate: saveBusinessHours, isPending: isSavingBusinessHours } =
+    useMutation({
+      mutationKey: updateArtisan.key,
+      mutationFn: updateArtisan.fn,
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: getArtisan.key(id) });
+      },
+    });
+
+  const { mutate: savePriceList, isPending: isSavingPriceList } = useMutation(
+    {
+      mutationKey: updateArtisan.key,
+      mutationFn: updateArtisan.fn,
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: getArtisan.key(id) });
+      },
+    },
+  );
+
+  const { mutate: saveServiceTypes, isPending: isSavingServiceTypes } =
+    useMutation({
+      mutationKey: updateArtisan.key,
+      mutationFn: updateArtisan.fn,
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: getArtisan.key(id) });
+      },
+    });
+
   function cancelEditingDetails() {
     setIsEditingDetails(false);
     setFormResetKey((key) => key + 1);
+  }
+
+  function handleSubmitBusinessInfo(payload: BusinessInfoPayload) {
+    if (!business) {
+      alert("This artisan has no business on record yet — nothing to save.");
+      return;
+    }
+    saveBusinessInfo({
+      id,
+      payload: { businesses: [{ id: business.business_details.id, ...payload }] },
+    });
+  }
+
+  function handleSaveBusinessHours(hours: BusinessHour[]) {
+    if (!business) {
+      alert("This artisan has no business on record yet — nothing to save.");
+      return;
+    }
+    saveBusinessHours({
+      id,
+      payload: {
+        businesses: [
+          { id: business.business_details.id, business_hours: hours },
+        ],
+      },
+    });
+  }
+
+  function handleSavePriceList(categories: PriceListPayload) {
+    if (!business) {
+      alert("This artisan has no business on record yet — nothing to save.");
+      return;
+    }
+    savePriceList({
+      id,
+      payload: {
+        businesses: [
+          { id: business.business_details.id, service_categories: categories },
+        ],
+      },
+    });
+  }
+
+  function handleSaveServiceTypes(serviceTypes: string[]) {
+    if (!business) {
+      alert("This artisan has no business on record yet — nothing to save.");
+      return;
+    }
+    saveServiceTypes({
+      id,
+      payload: {
+        businesses: [
+          { id: business.business_details.id, service_types: serviceTypes },
+        ],
+      },
+    });
   }
 
   useEffect(() => {
@@ -107,6 +204,7 @@ export default function ArtisanDetailPage() {
     service: data.professions.join(", ") || "-",
     bookings: data.business_count,
   };
+  const business = data.businesses?.[0];
 
   return (
     <div className="min-h-screen bg-[#F7F7F8] p-8">
@@ -279,11 +377,20 @@ export default function ArtisanDetailPage() {
       <ArtisanDetailTabs
         key={formResetKey}
         artisan={artisan}
+        business={business}
         isEditingDetails={isEditingDetails}
         ownerDetailsFormId={OWNER_DETAILS_FORM_ID}
         onSubmitOwnerDetails={(payload) => saveOwnerDetails({ id, payload })}
         onCancelEditingDetails={cancelEditingDetails}
         isSavingOwnerDetails={isSavingOwnerDetails}
+        onSubmitBusinessInfo={handleSubmitBusinessInfo}
+        isSavingBusinessInfo={isSavingBusinessInfo}
+        onSaveBusinessHours={handleSaveBusinessHours}
+        isSavingBusinessHours={isSavingBusinessHours}
+        onSavePriceList={handleSavePriceList}
+        isSavingPriceList={isSavingPriceList}
+        onSaveServiceTypes={handleSaveServiceTypes}
+        isSavingServiceTypes={isSavingServiceTypes}
       />
     </div>
   );
