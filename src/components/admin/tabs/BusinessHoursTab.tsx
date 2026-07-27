@@ -29,7 +29,7 @@ const DEFAULT_DAY: DayHours = { enabled: false, open: "08:00", close: "17:00" };
 function toApiHours(hours: BusinessHours): BusinessHour[] {
   return DAYS.map((day) => ({
     ...(hours[day].id ? { id: hours[day].id } : {}),
-    day,
+    day: day.toUpperCase(),
     is_available_for_booking: hours[day].enabled,
     open_time: hours[day].open,
     close_time: hours[day].close,
@@ -37,9 +37,11 @@ function toApiHours(hours: BusinessHours): BusinessHour[] {
 }
 
 function fromApiHours(businessHours?: BusinessHour[]): BusinessHours {
-  const byDay = new Map((businessHours ?? []).map((h) => [h.day, h]));
+  const byDay = new Map(
+    (businessHours ?? []).map((h) => [h.day.toUpperCase(), h]),
+  );
   return DAYS.reduce((acc, day) => {
-    const entry = byDay.get(day);
+    const entry = byDay.get(day.toUpperCase());
     return {
       ...acc,
       [day]: entry

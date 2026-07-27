@@ -36,6 +36,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const stored = Cookies.get(USER_COOKIE);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setUser(stored ? JSON.parse(stored) : null);
     setIsLoading(false);
   }, []);
